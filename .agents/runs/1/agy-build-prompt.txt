@@ -1,0 +1,18 @@
+あなたは実装担当です。Next.js (App Router) + Tailwind CSS の FAQアコーディオンプロジェクトを、このプロジェクトルートに新規実装してください。
+
+まず .agents/runs/1/spec.md（仕様）と .agents/runs/1/design.md（設計書）を全文読んでください。設計書の技術選定（Next.js 16.x / React 19.2.x / Tailwind CSS 4.1.x、CSSベース設定）とディレクトリ構成・コンポーネント契約に厳密に従ってください。
+
+実装物:
+- プロジェクト土台（package.json、tsconfig、next.config、postcss設定、app/layout.tsx 等、設計書の構成どおり）
+- app/globals.css（spec の全要件： interpolate-size、@starting-style、flash/subtle アニメーション、reduced-motion、forced-colors、pb-safe）
+- app/faq-preview/page.tsx（クエリ同期 ?style= / ?q=、排他開閉、初期スクロール＆フォーカス、Suspense）
+- components/RetroAccordionFaq.tsx / CityPopAccordionFaq.tsx（JSON-LD 同梱）
+- components/ShareButtonGroup.tsx / MobileStickyShareBar.tsx
+- FAQサンプルデータ（設計書の文案方針どおり8問）
+
+進め方:
+- 土台は create-next-app を使っても、手書きでもよい。バージョンは設計書の指定に合わせること
+- 最後に `npm install` まで実行すること（dev サーバーの起動と `npm run build` は検証担当が行うので不要）
+- TypeScript の型エラーが出る書き方は避け、設計書の props 契約を守ること
+
+最後に .agents/runs/1/build-log.md を書いてください（やったこと／根拠（設計書の該当箇所）／未確認のこと、の3区分）。報告は短く。
