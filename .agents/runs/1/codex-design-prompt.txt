@@ -1,0 +1,13 @@
+あなたは設計担当です。.agents/runs/1/spec.md（仕様書）を必ず読んで、Next.js (App Router) + Tailwind CSS の FAQアコーディオンプロジェクトの設計書を作成してください。
+
+設計書に含めること:
+- 技術選定: Next.js / React / Tailwind のバージョンと根拠（Tailwind v4 の CSS ベース設定か v3 の config 方式か。spec の pb-safe やカスタムアニメーションの実装方式と合わせて決めること）、TypeScript 前提
+- ディレクトリ構成と各ファイルの責務
+- データモデル: FAQ項目の型（id, question, answer, category 等）、サンプルデータ8問の文案方針（spec の注意に従う）
+- 各コンポーネントの props・内部状態・DOM構造（details/summary の使い方、name 属性による排他開閉、JSON-LD の生成方法）
+- faq-preview ページ: クエリ同期の実装方針（useSearchParams + Suspense、初期スクロール＆フォーカスの条件）、スタイル切替の状態管理
+- globals.css: spec の各要件（interpolate-size, @starting-style, flash/subtle アニメーション, reduced-motion, forced-colors, pb-safe）をどう実装するか
+- ShareButtonGroup / MobileStickyShareBar の動作仕様（Web Share API のフォールバック、スクロール連動隠蔽とフッター吸着の判定方法、テーマ連動）
+- アクセシビリティ要件（キーボード操作、aria、フォーカス可視、コントラスト）
+
+出力先: design.md をプロジェクトルート直下に書いてください（.agents 配下は書き込めない場合があるため）。設計書を書いたら要点を短く報告してください。実装はまだしないこと。
