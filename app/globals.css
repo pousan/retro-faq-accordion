@@ -1,0 +1,311 @@
+@import "tailwindcss";
+
+@theme {
+  --font-retro-serif: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho",
+    "Noto Serif JP", "MS PMincho", serif;
+  --font-citypop-sans: "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "BIZ UDPGothic", "Noto Sans JP", "Yu Gothic", sans-serif;
+
+  --color-retro-bg: #f6efe0;
+  --color-retro-surface: #fffdf8;
+  --color-retro-surface-alt: #efe3ca;
+  --color-retro-ink: #28180d;
+  --color-retro-muted: #593d26;
+  --color-retro-border: #3a2212;
+  --color-retro-vermilion: #a82417;
+  --color-retro-vermilion-soft: #f9dcd6;
+  --color-retro-gold: #d9a441;
+
+  --color-citypop-bg: #e4fbf4;
+  --color-citypop-surface: #ffffff;
+  --color-citypop-surface-alt: #ffd9ec;
+  --color-citypop-ink: #141026;
+  --color-citypop-muted: #322854;
+  --color-citypop-border: #141026;
+  --color-citypop-pink: #ff79b4;
+  --color-citypop-mint: #6bf0d2;
+  --color-citypop-yellow: #ffe45e;
+
+  --spacing-faq-gap: 1rem;
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility px-safe {
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+:root,
+[data-theme="retro"] {
+  --faq-bg: var(--color-retro-bg);
+  --faq-surface: var(--color-retro-surface);
+  --faq-surface-hover: #f9f2e2;
+  --faq-surface-open: #fcf6e8;
+  --faq-surface-accent: var(--color-retro-surface-alt);
+  --faq-ink: var(--color-retro-ink);
+  --faq-muted: var(--color-retro-muted);
+  --faq-border: var(--color-retro-border);
+  --faq-accent: var(--color-retro-vermilion);
+  --faq-accent-contrast: #fffdf8;
+  --faq-badge-bg: var(--color-retro-vermilion);
+  --faq-badge-fg: #fffdf8;
+  --faq-tag-bg: var(--color-retro-surface-alt);
+  --faq-tag-fg: var(--color-retro-ink);
+  --faq-shadow-color: #3a2212;
+  --faq-shadow: 4px 4px 0px var(--faq-shadow-color);
+  --faq-shadow-lg: 6px 6px 0px var(--faq-shadow-color);
+  --faq-radius: 0.25rem;
+  --faq-border-width: 2px;
+  --faq-focus-ring: #a82417;
+  --faq-font: var(--font-retro-serif);
+}
+
+[data-theme="citypop"] {
+  --faq-bg: var(--color-citypop-bg);
+  --faq-surface: var(--color-citypop-surface);
+  --faq-surface-hover: #fff0f7;
+  --faq-surface-open: #f5fffb;
+  --faq-surface-accent: var(--color-citypop-surface-alt);
+  --faq-ink: var(--color-citypop-ink);
+  --faq-muted: var(--color-citypop-muted);
+  --faq-border: var(--color-citypop-border);
+  --faq-accent: var(--color-citypop-pink);
+  --faq-accent-contrast: var(--color-citypop-ink);
+  --faq-badge-bg: var(--color-citypop-pink);
+  --faq-badge-fg: var(--color-citypop-ink);
+  --faq-tag-bg: var(--color-citypop-mint);
+  --faq-tag-fg: var(--color-citypop-ink);
+  --faq-shadow-color: #141026;
+  --faq-shadow: 5px 5px 0px var(--faq-shadow-color);
+  --faq-shadow-lg: 7px 7px 0px var(--faq-shadow-color);
+  --faq-radius: 1.5rem;
+  --faq-border-width: 3px;
+  --faq-focus-ring: #141026;
+  --faq-font: var(--font-citypop-sans);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--faq-bg);
+  color: var(--faq-ink);
+  font-family: var(--faq-font);
+  line-height: 1.65;
+  overflow-x: clip;
+}
+
+.faq-theme-root {
+  background-color: var(--faq-bg);
+  color: var(--faq-ink);
+  font-family: var(--faq-font);
+}
+
+.faq-theme-root[data-theme="retro"] {
+  background-image: radial-gradient(
+      rgba(58, 34, 18, 0.06) 1px,
+      transparent 1px
+    ),
+    linear-gradient(180deg, #f8f2e4 0%, #f1e6d0 100%);
+  background-size: 20px 20px, 100% 100%;
+}
+
+.faq-theme-root[data-theme="citypop"] {
+  background-image: radial-gradient(
+      rgba(255, 121, 180, 0.22) 1.5px,
+      transparent 1.5px
+    ),
+    linear-gradient(135deg, #d7fbf0 0%, #fff2f9 52%, #e3f9ff 100%);
+  background-size: 22px 22px, 100% 100%;
+}
+
+/* Standard details / summary reset & focus */
+.faq-details > summary {
+  list-style: none;
+  scroll-margin-block-start: 1.5rem;
+}
+
+.faq-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-details > summary:focus-visible,
+.faq-focusable:focus-visible {
+  outline: 3px solid var(--faq-focus-ring);
+  outline-offset: 3px;
+}
+
+/* Open state icon rotation */
+.faq-chevron {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.faq-details[open] .faq-chevron {
+  transform: rotate(180deg);
+}
+
+/* Progressive enhancement: Native height:auto interpolation + @starting-style */
+@supports (interpolate-size: allow-keywords) and
+  selector(details::details-content) {
+  .faq-list {
+    interpolate-size: allow-keywords;
+  }
+
+  .faq-details::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow: clip;
+    transition-property: block-size, opacity, content-visibility;
+    transition-duration: 240ms, 200ms, 240ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1), ease, linear;
+    transition-behavior: allow-discrete;
+  }
+
+  .faq-details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
+  @starting-style {
+    .faq-details[open]::details-content {
+      block-size: 0;
+      opacity: 0;
+    }
+  }
+}
+
+/* 2-round-trip (2 iterations) flash animations for initial deep-link arrival */
+@keyframes faq-flash-retro {
+  0%,
+  100% {
+    background-color: var(--color-retro-surface);
+    box-shadow: 0 0 0 0 rgba(168, 36, 23, 0);
+  }
+  50% {
+    background-color: var(--color-retro-vermilion-soft);
+    box-shadow: 0 0 0 4px var(--color-retro-vermilion);
+  }
+}
+
+@keyframes faq-flash-citypop {
+  0%,
+  100% {
+    background-color: var(--color-citypop-surface);
+    box-shadow: 0 0 0 0 rgba(255, 121, 180, 0);
+  }
+  50% {
+    background-color: var(--color-citypop-yellow);
+    box-shadow: 0 0 0 5px var(--color-citypop-pink);
+  }
+}
+
+/* 1-pulse subtle animations for user toggle open */
+@keyframes faq-subtle-retro {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 36, 23, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(168, 36, 23, 0.65);
+  }
+}
+
+@keyframes faq-subtle-citypop {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(107, 240, 210, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 5px var(--color-citypop-mint);
+  }
+}
+
+.animate-flash-retro {
+  animation: faq-flash-retro 800ms ease-in-out 2;
+}
+
+.animate-flash-citypop {
+  animation: faq-flash-citypop 800ms ease-in-out 2;
+}
+
+.animate-subtle-retro {
+  animation: faq-subtle-retro 500ms ease-out 1;
+}
+
+.animate-subtle-citypop {
+  animation: faq-subtle-citypop 500ms ease-out 1;
+}
+
+/* Sticky bar transition */
+.sticky-share-bar {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 220ms linear;
+}
+
+/* Windows High Contrast / Forced Colors Mode */
+@media (forced-colors: active) {
+  .faq-theme-root,
+  .faq-card,
+  .faq-details,
+  .faq-details > summary,
+  .sticky-share-bar,
+  .theme-selector-card {
+    forced-color-adjust: auto;
+    background-image: none !important;
+    background-color: Canvas !important;
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+    box-shadow: none !important;
+  }
+
+  .faq-details[open] {
+    border-color: Highlight !important;
+  }
+
+  .faq-details[open] > summary {
+    border-bottom: 2px solid Highlight !important;
+  }
+
+  .faq-q-badge,
+  .faq-category-badge {
+    background-color: Canvas !important;
+    color: ButtonText !important;
+    border: 2px solid ButtonText !important;
+  }
+
+  .faq-details > summary:focus-visible,
+  .faq-focusable:focus-visible {
+    outline: 3px solid Highlight !important;
+    outline-offset: 3px !important;
+  }
+}
+
+/* Reduced Motion preference (placed last to override animations/transitions) */
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body {
+    scroll-behavior: auto !important;
+  }
+
+  .faq-chevron,
+  .sticky-share-bar,
+  .faq-details::details-content {
+    transition: none !important;
+  }
+
+  .animate-flash-retro,
+  .animate-flash-citypop,
+  .animate-subtle-retro,
+  .animate-subtle-citypop {
+    animation: none !important;
+  }
+
+  .faq-summary-highlighted[data-highlight="active"] {
+    outline: 3px dashed var(--faq-focus-ring);
+    outline-offset: -4px;
+  }
+}

@@ -1,0 +1,33 @@
+あなたは実装担当です。検品指摘の修正を行ってください。
+
+まず .agents/runs/1/check-log.md（検品記録）を全文読み、以下をすべて修正してください。検証担当の実測再現も併記します。
+
+【高】項目10 初期スクロール・フォーカス（hooks/useFaqQuerySync.ts）
+- Strict Mode の setup→cleanup→setup で初期移動が消える問題を直すこと（実行前に handled を確定させない。予約中と完了を区別し、cleanup 後に再予約できるように）。
+- 実測再現（dev・?style=retro&q=3）: 項目3は開くが focus は BODY のまま、scrollY=0。修正後は summary へフォーカスし対象が画面内へスクロールすること。
+- 事前操作の検知に scroll イベントも加えること（ユーザー先行スクロール時に奪わない）。
+
+【高】項目7 StickyBar のフォーカス保護（hooks/useStickyShareBar.ts、components/MobileStickyShareBar.tsx）
+- フォーカス中はバーが画面外へ押し上げられないよう、可視領域内に位置を制限すること。visualViewport の height/offsetTop を位置計算に使うこと。
+- 項目7の低（性能）: getBoundingClientRect はフッター接近中のみ呼ぶよう最適化すること。
+
+【中】項目9 URL同期（hooks/useFaqQuerySync.ts、components/AccordionFaq.tsx）
+- (a) 各操作の直前に現在 location を解析し、変更しない側の値は現在URLから取ること（古い render 値で上書きしない）。
+- (b) プログラムによる toggle を利用者操作と誤認しないこと。実測再現: ?style=invalid&q=1 の初期表示で URL が style=retro へ無操作で書き換わった。修正後は初期表示で URL を書き換えないこと。
+
+【中】項目2 強調アニメーションの状態管理（components/AccordionFaq.tsx）
+- テーマ変更で強調を再生しないこと。animationend だけに依存せず、選択変更と motion 設定を含めて強調の寿命を管理すること。
+
+【中】項目3 単体コンポーネントの字体（components/AccordionFaq.tsx、app/globals.css）
+- AccordionFaq 本体（section）にもテーマの font-family が適用され、単体利用でも明朝／サンセリフが切り替わるようにすること。
+
+【低】項目5 共有成功時の表示（components/ShareButtonGroup.tsx）
+- Web Share 成功とコピー完了の状態を区別し、コピーしていないのに「コピー済」と表示しないこと。
+
+【低】項目13 型安全性（hooks/useStickyShareBar.ts）
+- `(next as any)[key] = val` を型を保つ更新に置き換えること。
+
+進め方:
+- 他の合格項目の挙動は変えないこと。設計書（.agents/runs/1/design.md）の契約を優先。
+- 最後に .agents/runs/1/build-log.md へ修正内容を追記すること（検品項目番号と対応づけて）。
+- dev サーバー起動や build は検証担当が行うので不要。報告は短く。

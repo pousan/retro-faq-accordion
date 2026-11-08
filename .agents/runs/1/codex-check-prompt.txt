@@ -1,0 +1,12 @@
+あなたは検品担当です。FAQアコーディオンプロジェクトの実装を、仕様書と設計書に照らして検品してください。
+
+読むもの: .agents/runs/1/spec.md、.agents/runs/1/design.md、.agents/runs/1/build-log.md、プロジェクト内の全ソース（app/, components/, hooks/, lib/, data/, package.json 等）。
+
+検品観点:
+- spec の要件充足: globals.css の各機能（interpolate-size、@starting-style、transition-behavior、flash/subtle アニメーション、reduced-motion、forced-colors、pb-safe）、両テーマのコンポーネント、JSON-LD、共有UI（Web Share フォールバック含む）、StickyBar のスクロール連動とフッター吸着、faq-preview のクエリ同期・排他開閉・初期スクロール＆フォーカス・Suspense
+- 設計書の契約との一致（props、データモデル、ファイル構成、バージョン）
+- TypeScript の型安全性（any の濫用、未定義参照、props 不一致）
+- アクセシビリティ（details/summary の使い方、aria、キーボード、フォーカス）
+- FAQ文案が Studio Miraie の公開条件と矛盾しないか、実績の捏造がないか
+
+結果を check-log.md（プロジェクトルート直下）に、項目ごとに「合格／要修正（重大度： 高・中・低）」と根拠を書き、最後に総合判定を明記してください。ビルド実行は検証担当が行うため不要です。
