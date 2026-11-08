@@ -106,7 +106,7 @@ export function ShareButtonGroup({
     if (outcome === "shared") {
       setIsBusy(false);
       setShowManualCopy(false);
-      setStatus("copied");
+      setStatus("idle");
       setMessage("共有を完了しました。");
       scheduleIdleReset();
       return;

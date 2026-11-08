@@ -31,24 +31,25 @@ export function useStickyShareBar(footerId: string) {
   const accumulatedDeltaRef = useRef<number>(0);
   const footerNearRef = useRef<boolean>(false);
   const hasFocusWithinRef = useRef<boolean>(false);
+  const barHeightRef = useRef<number>(72);
   const rafIdRef = useRef<number | null>(null);
+  const scheduleSyncRef = useRef<(() => void) | null>(null);
 
   const updateStateIfChanged = useCallback(
     (partial: Partial<StickyShareBarState>) => {
       setState((prev) => {
-        let changed = false;
-        const next: StickyShareBarState = { ...prev };
-        (Object.keys(partial) as Array<keyof StickyShareBarState>).forEach(
-          (key) => {
-            const val = partial[key];
-            if (val !== undefined && prev[key] !== val) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (next as any)[key] = val;
-              changed = true;
-            }
-          }
-        );
-        return changed ? next : prev;
+        const next: StickyShareBarState = { ...prev, ...partial };
+        if (
+          next.hiddenByScroll === prev.hiddenByScroll &&
+          next.hiddenByKeyboard === prev.hiddenByKeyboard &&
+          next.hiddenAboveViewport === prev.hiddenAboveViewport &&
+          next.footerOverlap === prev.footerOverlap &&
+          next.barHeight === prev.barHeight &&
+          next.hasFocusWithin === prev.hasFocusWithin
+        ) {
+          return prev;
+        }
+        return next;
       });
     },
     []
@@ -60,7 +61,9 @@ export function useStickyShareBar(footerId: string) {
       hasFocusWithin: true,
       hiddenByScroll: false,
       hiddenByKeyboard: false,
+      hiddenAboveViewport: false,
     });
+    scheduleSyncRef.current?.();
   }, [updateStateIfChanged]);
 
   const handleFocusOut = useCallback(
@@ -74,6 +77,7 @@ export function useStickyShareBar(footerId: string) {
       updateStateIfChanged({
         hasFocusWithin: false,
       });
+      scheduleSyncRef.current?.();
     },
     [updateStateIfChanged]
   );
@@ -120,33 +124,55 @@ export function useStickyShareBar(footerId: string) {
         nextHiddenByScroll = false;
       }
 
-      let nextFooterOverlap = 0;
+      const vv = window.visualViewport;
+      const layoutViewportHeight = window.innerHeight;
+      const viewportTop = vv ? vv.offsetTop : 0;
+      const viewportHeight = vv ? vv.height : layoutViewportHeight;
+      const viewportBottom = viewportTop + viewportHeight;
+      const visualBottomOffset = Math.max(
+        0,
+        Math.round(layoutViewportHeight - viewportBottom)
+      );
+      const barH = barRef.current?.offsetHeight ?? barHeightRef.current;
+
+      let nextFooterOverlap = hasFocusWithinRef.current
+        ? visualBottomOffset
+        : 0;
       let nextHiddenAboveViewport = false;
       const footerEl = document.getElementById(footerId);
 
-      if (footerEl) {
+      if (footerNearRef.current && footerEl) {
         const footerRect = footerEl.getBoundingClientRect();
-        const viewportBottom = window.innerHeight;
         if (footerRect.top < viewportBottom) {
-          footerNearRef.current = true;
-        }
-        if (footerNearRef.current) {
-          const overlap = Math.max(
+          const overlapFromVisualBottom = Math.max(
             0,
             Math.round(viewportBottom - footerRect.top)
           );
-          nextFooterOverlap = overlap;
-          const barH = barRef.current?.offsetHeight ?? 72;
-          if (footerRect.top <= barH && !hasFocusWithinRef.current) {
+          nextFooterOverlap = visualBottomOffset + overlapFromVisualBottom;
+          if (
+            footerRect.top <= viewportTop + barH &&
+            !hasFocusWithinRef.current
+          ) {
             nextHiddenAboveViewport = true;
           }
         }
       }
 
+      if (hasFocusWithinRef.current) {
+        const maxFocusBottom = Math.max(
+          visualBottomOffset,
+          Math.floor(layoutViewportHeight - viewportTop - barH)
+        );
+        nextFooterOverlap = Math.min(
+          Math.max(nextFooterOverlap, visualBottomOffset),
+          maxFocusBottom
+        );
+        nextHiddenAboveViewport = false;
+      }
+
       let nextHiddenByKeyboard = false;
-      if (window.visualViewport && !hasFocusWithinRef.current) {
-        const keyboardDiff =
-          window.innerHeight - window.visualViewport.height;
+      if (vv && !hasFocusWithinRef.current) {
+        const keyboardDiff = layoutViewportHeight - vv.height;
         if (keyboardDiff > KEYBOARD_HEIGHT_THRESHOLD_PX) {
           nextHiddenByKeyboard = true;
         }
@@ -170,6 +196,7 @@ export function useStickyShareBar(footerId: string) {
       }
       rafIdRef.current = window.requestAnimationFrame(measureAndSync);
     };
+    scheduleSyncRef.current = scheduleSync;
 
     const footerEl = document.getElementById(footerId);
     const sentinelEl =
@@ -179,10 +206,13 @@ export function useStickyShareBar(footerId: string) {
     if (typeof IntersectionObserver !== "undefined" && sentinelEl) {
       intersectionObserver = new IntersectionObserver(
         (entries) => {
+          const vvNow = window.visualViewport;
+          const vBottom = vvNow
+            ? vvNow.offsetTop + vvNow.height
+            : window.innerHeight;
           for (const entry of entries) {
             footerNearRef.current =
-              entry.isIntersecting ||
-              entry.boundingClientRect.top < window.innerHeight;
+              entry.isIntersecting || entry.boundingClientRect.top < vBottom;
           }
           scheduleSync();
         },
@@ -193,6 +223,8 @@ export function useStickyShareBar(footerId: string) {
         }
       );
       intersectionObserver.observe(sentinelEl);
+    } else if (sentinelEl) {
+      footerNearRef.current = true;
     }
 
     let resizeObserver: ResizeObserver | null = null;
@@ -202,6 +234,7 @@ export function useStickyShareBar(footerId: string) {
           const target = entry.target as HTMLElement;
           const measured = Math.ceil(target.offsetHeight);
           if (measured > 0) {
+            barHeightRef.current = measured;
             updateStateIfChanged({ barHeight: measured });
           }
         }
@@ -222,6 +255,7 @@ export function useStickyShareBar(footerId: string) {
     scheduleSync();
 
     return () => {
+      scheduleSyncRef.current = null;
       window.removeEventListener("scroll", scheduleSync);
       window.removeEventListener("resize", scheduleSync);
       if (vv) {
@@ -250,6 +284,7 @@ export function useStickyShareBar(footerId: string) {
   return {
     barRef,
     isRetreated,
+    hasFocusWithin: state.hasFocusWithin,
     footerOverlap: state.footerOverlap,
     barHeight: state.barHeight,
     handleFocusIn,

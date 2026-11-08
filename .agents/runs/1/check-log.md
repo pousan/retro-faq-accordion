@@ -107,3 +107,14 @@ summaryはdetails最初の子で、内部にリンク・ボタンを入れず、
 ## 総合判定：要修正（重大度：高）
 
 主要機能・文案・データ・JSON-LD・Suspenseの骨格は揃っているが、初期スクロール＆フォーカスと固定バーのフォーカス保護に主要な未達がある。URL同期と強調状態の設計差分も修正が必要。現時点では検品合格としない。実装ソースは変更していない。
+
+## 検証担当（もち）による修正後検証 — 2026-11-08
+
+agy修正ラウンド後、以下を実測で確認した。
+
+- `npm run build` 成功（exit 0）、`npm run typecheck`（tsc --noEmit）エラーなし
+- 本番サーバー実ブラウザ確認： 両テーマ×375/1280px、全条件で横はみ出し0・コンソールエラー0（favicon 404 は app/icon.svg 追加で解消済み）、details 8件、JSON-LD 出力あり、StickyBar 表示あり
+- 排他開閉＋クエリ同期： クリックで開いた項目だけが開き、URL が ?q=3 へ同期
+- 【修正前NG→修正後OK】dev（Strict Mode）?q=3: 修正前はフォーカスBODY・scrollY=0 → 修正後は Q3 の summary にフォーカス、scrollY=1050 で画面内に表示
+- 【修正前NG→修正後OK】?style=invalid&q=1: 修正前は無操作で style=retro へ書き換え → 修正後は URL 不変
+- 未実施： 実機スクリーンリーダー、Windows forced-colors 実表示、ソフトキーボード表示時の StickyBar 追従（コード修正は完了、実機確認は今後の課題）

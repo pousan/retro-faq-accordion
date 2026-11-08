@@ -39,3 +39,31 @@
 - 開発サーバー起動（`npm run dev`）および本番ビルド（`npm run build` / `npm run start`）の実行確認（指示により検証担当のスコープのため未実行）。
 - 実ブラウザ（Chromium / Firefox / Safari / iOS実機）での表示確認、レスポンシブ幅（320px〜デスクトップ）、Safe Area、スクロール・フッター吸着挙動、Web Share / Clipboard API の実機動作確認。
 - スクリーンリーダーおよび Windows ハイコントラストモード（`forced-colors: active`）実環境での視覚・読み上げ確認。
+
+## 4. 検品指摘への修正記録 (2026-11-08)
+
+`.agents/runs/1/check-log.md` の指摘事項（および検証担当による実測再現）に対し、以下の修正を実施した。
+
+- **【高】項目10 初期スクロール・フォーカス (`hooks/useFaqQuerySync.ts`)**
+  - `initialNavHandledRef`（boolean）を `initialNavStatusRef`（`"idle" | "scheduled" | "completed"`）へ変更し、予約中（`"scheduled"`）と実行完了（`"completed"`）を分離。Strict Mode の `setup → cleanup → setup` で最初の cleanup 時に `"scheduled"` から `"idle"` へ戻すことで、2回目の setup で二重 `requestAnimationFrame` が再予約され、対象 `<summary>` への `focus({ preventScroll: true })` と `scrollIntoView` が確実に1回実行されるよう修正。
+  - 初期強調トークン発行も `initialHighlightDispatchedRef` で分離し、Strict Mode 再実行で重複インクリメントしないよう整理。
+  - 事前操作検知リスナーに `scroll` イベントを追加し、初期移動実行前にユーザーがスクロールした場合はフォーカス・スクロール移動を抑止。プログラムによる `scrollIntoView` 実行直前に `scroll` リスナーを解除し、自身のスムーズスクロールをユーザー操作と誤認しないよう制御。
+- **【高】項目7 StickyBar のフォーカス保護・接近時のみ計測 (`hooks/useStickyShareBar.ts`, `components/MobileStickyShareBar.tsx`)**
+  - `window.visualViewport` の `offsetTop` と `height` を用いて可視領域の上端（`viewportTop`）・下端（`viewportBottom`）・レイアウトビューポート下端からのオフセット（`visualBottomOffset`）を算出。
+  - バー内にフォーカスがある間（`hasFocusWithin`）は、退避を抑止するだけでなく、`footerOverlap`（CSS `bottom` 値）を `[visualBottomOffset, max(visualBottomOffset, floor(innerHeight - viewportTop - barHeight))]` の範囲にクランプし、フッターを大きくスクロールした場合やソフトキーボード表示・拡大時でもバーが可視領域外（画面上端より上・可視下端より下）へ押し出されないよう修正。`focusin` / `focusout` 時にも即座に `scheduleSync` で位置を再計算するよう連携。
+  - `MobileStickyShareBar.tsx` でも `hasFocusWithin` の状態属性と `maxHeight: "100dvh"`、非負 `bottom` 指定を適用。
+  - 性能改善（項目7・低）：`footerEl.getBoundingClientRect()` を `IntersectionObserver` が更新する `footerNearRef.current === true` のときのみ呼ぶように変更し、非接近時の毎フレーム計測を排除。
+- **【中】項目9 URL同期・排他開閉 (`hooks/useFaqQuerySync.ts`, `components/AccordionFaq.tsx`)**
+  - (a) `handleThemeChange` と `handleOpenChange` の各操作直前に `new URLSearchParams(window.location.search)` を `parseFaqQuery` で解析し、変更しない側の値（テーマ変更時の `selectedId`、開閉変更時の `theme`）を古い render 値ではなく現在URLから取得するよう修正。
+  - (b) `AccordionFaq.tsx` で固定1フレームの `requestAnimationFrame` による `syncingTargetRef` 解除を廃止し、DOM変更が発生したときのみ `syncingTargetRef` を設定して `toggle` 側の次フレーム確認時に目標値との一致で消費するよう変更。さらに `selectedIdRef` と実DOMの `activeOpenId` が既に一致している場合は `onOpenChange` を通知しないようガードし、`useFaqQuerySync.ts` の `handleOpenChange` でも現在URLおよび `selectedId` と同一なら早期 return することで、`?style=invalid&q=1` の初期オープン時にプログラム由来 `toggle` でURLが無操作正規化される不具合を解消。
+- **【中】項目2 強調アニメーションの状態管理 (`components/AccordionFaq.tsx`, `hooks/useFaqQuerySync.ts`)**
+  - テーマ変更時（`trackedTheme !== theme`）に現在の `highlight.token` を即座に完了扱い（`completedAnimToken = highlight.token`）とし、テーマ切替で別テーマの `animation-name` が適用されて強調アニメーションが再生・再開始されないよう修正。
+  - `animationend` イベントだけに依存せず、`prefers-reduced-motion: reduce` の一致監視（`matchMedia`）、アニメーション時間に応じたフォールバックタイマー（flash: 1700ms / subtle: 600ms）、および選択項目変更（`selectedId !== highlight.id`）時の完了・静的強調解除（`dismissedStaticToken` および `useFaqQuerySync` 側の `highlight` クリア）を実装。
+- **【中】項目3 単体コンポーネントの字体 (`components/AccordionFaq.tsx`, `app/globals.css`)**
+  - `AccordionFaq.tsx` の `<section>` に `faq-section` クラスを付与し、`app/globals.css` で `.faq-section, [data-theme="retro"], [data-theme="citypop"]` に `font-family: var(--faq-font)` を適用。単体ラッパー（`RetroAccordionFaq` / `CityPopAccordionFaq`）を任意の親要素下に配置してもテーマ固有の明朝／サンセリフ字体が適用されるよう修正。
+- **【低】項目5 共有成功時の表示 (`components/ShareButtonGroup.tsx`)**
+  - Web Share API 成功時（`outcome === "shared"`）に `status` を `"copied"` ではなく `"idle"` に設定し、ライブリージョン通知（`message: "共有を完了しました。"`）を行いつつ、コピー専用ボタンが「コピー済」に変わらないよう修正（Clipboard フォールバック成功時のみ `status === "copied"`）。
+- **【低】項目13 型安全性 (`hooks/useStickyShareBar.ts`)**
+  - `updateStateIfChanged` 内の `(next as any)[key] = val` および `eslint-disable` コメントを廃止し、スプレッドマージ `{ ...prev, ...partial }` と各プロパティの厳密等価比較による型安全な状態更新に置換。
+- **項目14（アクセシビリティ）・項目16（build-log整合）**
+  - 項目7（フォーカス中のバー位置維持）と項目10（初期深いリンクのフォーカス・スクロール）の修正によりアクセシビリティ上の指摘箇所を解消し、本記録に検品項目番号との対応を反映。実ブラウザ・ビルド・型チェック・lint による最終検証は検証担当へ引き継ぐ。

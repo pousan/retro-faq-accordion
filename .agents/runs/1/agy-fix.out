@@ -1,0 +1,22 @@
+検品記録（[check-log.md](file:///home/hatch/workspace/projects/retro-faq-accordion/.agents/runs/1/check-log.md)）の指摘事項をすべて修正し、[build-log.md](file:///home/hatch/workspace/projects/retro-faq-accordion/.agents/runs/1/build-log.md#L43-L70) に追記しました。
+
+### 修正一覧
+
+- **【高】項目10 初期スクロール・フォーカス**（[`useFaqQuerySync`](file:///home/hatch/workspace/projects/retro-faq-accordion/hooks/useFaqQuerySync.ts#L47-L202)）
+  - `initialNavStatusRef`（`"idle" | "scheduled" | "completed"`）で予約中と完了を分離し、Strict Mode の cleanup 時に `"scheduled"` を `"idle"` へ戻して再予約されるよう修正。
+  - 事前操作検知に `scroll` イベントを追加し、プログラムによる `scrollIntoView` 直前に `scroll` リスナーを解除するよう制御。
+- **【高】項目7 StickyBar のフォーカス保護・接近時計測**（[`useStickyShareBar`](file:///home/hatch/workspace/projects/retro-faq-accordion/hooks/useStickyShareBar.ts#L60-L249)、[`MobileStickyShareBar`](file:///home/hatch/workspace/projects/retro-faq-accordion/components/MobileStickyShareBar.tsx#L14-L48)）
+  - `visualViewport` の `height` / `offsetTop` を位置計算に反映し、フォーカス中は `bottom`（`footerOverlap`）を可視領域内 `[visualBottomOffset, maxFocusBottom]` にクランプして画面外へ押し上げられないよう修正。`focusin` / `focusout` 時にも即時再計算を実行。
+  - `footerEl.getBoundingClientRect()` を `footerNearRef.current` が真のときのみ呼ぶよう最適化。
+- **【中】項目9 URL同期・排他開閉**（[`useFaqQuerySync`](file:///home/hatch/workspace/projects/retro-faq-accordion/hooks/useFaqQuerySync.ts#L225-L277)、[`AccordionFaq`](file:///home/hatch/workspace/projects/retro-faq-accordion/components/AccordionFaq.tsx#L112-L197)）
+  - (a) テーマ変更・開閉変更の直前に現在の `window.location.search` を [`parseFaqQuery`](file:///home/hatch/workspace/projects/retro-faq-accordion/lib/faq-query.ts#L28-L86) で再解析し、変更しない側の値を現在URLから取得するよう修正。
+  - (b) 固定1フレームの同期解除をやめ、`syncingTargetRef` と `selectedIdRef` による実DOM一致判定および `handleOpenChange` の同一値ガードにより、`?style=invalid&q=1` 初期表示時のプログラム由来 `toggle` でURLが書き換わらないよう修正。
+- **【中】項目2 強調アニメーションの状態管理**（[`AccordionFaq`](file:///home/hatch/workspace/projects/retro-faq-accordion/components/AccordionFaq.tsx#L41-L110)、[`useFaqQuerySync`](file:///home/hatch/workspace/projects/retro-faq-accordion/hooks/useFaqQuerySync.ts#L57-L67)）
+  - テーマ変更時に現在の強調トークンを完了扱いとし、テーマ変更で強調アニメーションが再生・再開始されないよう修正。
+  - `animationend` だけでなく、`prefers-reduced-motion` の変化監視・フォールバックタイマー・選択項目変更による完了／静的強調解除を実装。
+- **【中】項目3 単体コンポーネントの字体**（[`AccordionFaq`](file:///home/hatch/workspace/projects/retro-faq-accordion/components/AccordionFaq.tsx#L204-L208)、[globals.css](file:///home/hatch/workspace/projects/retro-faq-accordion/app/globals.css#L108-L112)）
+  - 本体 `<section>`（`.faq-section`）および `[data-theme]` 要素自体に `font-family: var(--faq-font)` を適用し、単体利用でも明朝／サンセリフが切り替わるよう修正。
+- **【低】項目5 共有成功時の表示**（[`ShareButtonGroup`](file:///home/hatch/workspace/projects/retro-faq-accordion/components/ShareButtonGroup.tsx#L106-L113)）
+  - Web Share 成功時は `status` を `"idle"` とし、ステータス通知のみ行ってコピー専用ボタンが「コピー済」にならないよう修正。
+- **【低】項目13 型安全性**（[`useStickyShareBar`](file:///home/hatch/workspace/projects/retro-faq-accordion/hooks/useStickyShareBar.ts#L38-L56)）
+  - `any` キャストを廃止し、型を保持するオブジェクトマージと厳密比較に置換。

@@ -34,23 +34,88 @@ export function AccordionFaq({
 }: AccordionFaqProps) {
   const detailsMapRef = useRef<Map<string, HTMLDetailsElement>>(new Map());
   const onOpenChangeRef = useRef<typeof onOpenChange>(onOpenChange);
+  const selectedIdRef = useRef<string | null>(selectedId);
   const syncingTargetRef = useRef<string | null | undefined>(undefined);
   const toggleRafRef = useRef<number | null>(null);
 
+  const [trackedTheme, setTrackedTheme] = useState<FaqTheme>(theme);
   const [completedAnimToken, setCompletedAnimToken] = useState<number | null>(
     null
   );
+  const [dismissedStaticToken, setDismissedStaticToken] = useState<
+    number | null
+  >(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] =
+    useState<boolean>(false);
+
+  if (trackedTheme !== theme) {
+    setTrackedTheme(theme);
+    if (highlight && completedAnimToken !== highlight.token) {
+      setCompletedAnimToken(highlight.token);
+    }
+  }
+
+  if (highlight && selectedId !== highlight.id) {
+    if (completedAnimToken !== highlight.token) {
+      setCompletedAnimToken(highlight.token);
+    }
+    if (dismissedStaticToken !== highlight.token) {
+      setDismissedStaticToken(highlight.token);
+    }
+  }
 
   useEffect(() => {
     onOpenChangeRef.current = onOpenChange;
   }, [onOpenChange]);
 
   useEffect(() => {
-    syncingTargetRef.current = selectedId;
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncMotionPreference = () => {
+      const matches = mediaQuery.matches;
+      setPrefersReducedMotion(matches);
+      if (matches && highlight) {
+        setCompletedAnimToken(highlight.token);
+      }
+    };
+
+    syncMotionPreference();
+    mediaQuery.addEventListener("change", syncMotionPreference);
+    return () => {
+      mediaQuery.removeEventListener("change", syncMotionPreference);
+    };
+  }, [highlight]);
+
+  useEffect(() => {
+    if (
+      !highlight ||
+      prefersReducedMotion ||
+      completedAnimToken === highlight.token
+    ) {
+      return;
+    }
+
+    const durationMs = highlight.mode === "flash" ? 1700 : 600;
+    const timerId = window.setTimeout(() => {
+      setCompletedAnimToken(highlight.token);
+    }, durationMs);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [completedAnimToken, highlight, prefersReducedMotion]);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+    let didMutateDom = false;
 
     detailsMapRef.current.forEach((el, itemId) => {
       if (itemId !== selectedId && el.open) {
         el.open = false;
+        didMutateDom = true;
       }
     });
 
@@ -58,16 +123,13 @@ export function AccordionFaq({
       const targetEl = detailsMapRef.current.get(selectedId);
       if (targetEl && !targetEl.open) {
         targetEl.open = true;
+        didMutateDom = true;
       }
     }
 
-    const clearSyncRaf = window.requestAnimationFrame(() => {
-      syncingTargetRef.current = undefined;
-    });
-
-    return () => {
-      window.cancelAnimationFrame(clearSyncRaf);
-    };
+    if (didMutateDom) {
+      syncingTargetRef.current = selectedId;
+    }
   }, [selectedId, items]);
 
   useEffect(() => {
@@ -117,13 +179,19 @@ export function AccordionFaq({
           }
         }
 
-        if (
-          syncingTargetRef.current !== undefined &&
-          activeOpenId === syncingTargetRef.current
-        ) {
+        if (syncingTargetRef.current !== undefined) {
+          const syncTarget = syncingTargetRef.current;
+          syncingTargetRef.current = undefined;
+          if (activeOpenId === syncTarget) {
+            return;
+          }
+        }
+
+        if (activeOpenId === selectedIdRef.current) {
           return;
         }
 
+        selectedIdRef.current = activeOpenId;
         onOpenChangeRef.current?.(activeOpenId);
       });
     },
@@ -138,7 +206,7 @@ export function AccordionFaq({
     <section
       aria-labelledby={headingId}
       data-theme={theme}
-      className="w-full"
+      className="faq-section w-full"
     >
       <div
         className={
@@ -193,14 +261,19 @@ export function AccordionFaq({
           const summaryDomId = `${instanceId}-${item.id}-summary`;
 
           const isHighlightedItem =
-            highlight !== undefined && highlight.id === item.id;
+            highlight !== undefined &&
+            highlight.id === item.id &&
+            selectedId === item.id;
           const shouldPlayAnimation =
-            isHighlightedItem && completedAnimToken !== highlight.token;
+            isHighlightedItem &&
+            !prefersReducedMotion &&
+            trackedTheme === theme &&
+            completedAnimToken !== highlight.token;
           const animationClass = shouldPlayAnimation
             ? HIGHLIGHT_CLASS_MAP[theme][highlight.mode]
             : "";
           const isStaticHighlightActive =
-            isHighlightedItem && selectedId === item.id;
+            isHighlightedItem && dismissedStaticToken !== highlight.token;
 
           const paragraphs = item.answer
             .split("\n")

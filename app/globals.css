@@ -105,6 +105,12 @@ body {
   font-family: var(--faq-font);
 }
 
+.faq-section,
+[data-theme="retro"],
+[data-theme="citypop"] {
+  font-family: var(--faq-font);
+}
+
 .faq-theme-root[data-theme="retro"] {
   background-image: radial-gradient(
       rgba(58, 34, 18, 0.06) 1px,

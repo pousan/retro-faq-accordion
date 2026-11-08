@@ -44,7 +44,10 @@ export function useFaqQuerySync(
   );
 
   const tokenRef = useRef<number>(0);
-  const initialNavHandledRef = useRef<boolean>(false);
+  const initialNavStatusRef = useRef<"idle" | "scheduled" | "completed">(
+    "idle"
+  );
+  const initialHighlightDispatchedRef = useRef<boolean>(false);
   const userInteractedBeforeNavRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -52,12 +55,43 @@ export function useFaqQuerySync(
   }, []);
 
   useEffect(() => {
-    if (initialNavHandledRef.current) {
+    setHighlight((prev) => {
+      if (!prev) {
+        return undefined;
+      }
+      if (selectedId === null || prev.id !== selectedId) {
+        return undefined;
+      }
+      return prev;
+    });
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (initialNavStatusRef.current === "completed") {
       return;
+    }
+
+    if (!validExplicitQuestion || !selectedId) {
+      initialNavStatusRef.current = "completed";
+      return;
+    }
+
+    const targetId = selectedId;
+    initialNavStatusRef.current = "scheduled";
+
+    if (!initialHighlightDispatchedRef.current) {
+      initialHighlightDispatchedRef.current = true;
+      tokenRef.current += 1;
+      setHighlight({
+        id: targetId,
+        mode: "flash",
+        token: tokenRef.current,
+      });
     }
 
     const markUserInteracted = () => {
       userInteractedBeforeNavRef.current = true;
+      initialNavStatusRef.current = "completed";
     };
 
     window.addEventListener("keydown", markUserInteracted, {
@@ -76,81 +110,80 @@ export function useFaqQuerySync(
       passive: true,
       once: true,
     });
+    window.addEventListener("scroll", markUserInteracted, {
+      passive: true,
+      once: true,
+    });
 
     let rafId1: number | null = null;
     let rafId2: number | null = null;
     let correctionTimeoutId: number | null = null;
 
-    if (!validExplicitQuestion || !selectedId) {
-      initialNavHandledRef.current = true;
-    } else {
-      const targetId = selectedId;
-      initialNavHandledRef.current = true;
+    rafId1 = window.requestAnimationFrame(() => {
+      rafId1 = null;
+      rafId2 = window.requestAnimationFrame(() => {
+        rafId2 = null;
 
-      tokenRef.current += 1;
-      setHighlight({
-        id: targetId,
-        mode: "flash",
-        token: tokenRef.current,
-      });
+        if (userInteractedBeforeNavRef.current) {
+          initialNavStatusRef.current = "completed";
+          return;
+        }
 
-      rafId1 = window.requestAnimationFrame(() => {
-        rafId2 = window.requestAnimationFrame(() => {
-          if (userInteractedBeforeNavRef.current) {
-            return;
-          }
+        const detailsEl = document.getElementById(
+          `${instanceId}-${targetId}`
+        ) as HTMLDetailsElement | null;
+        const summaryEl = document.getElementById(
+          `${instanceId}-${targetId}-summary`
+        ) as HTMLElement | null;
 
-          const detailsEl = document.getElementById(
-            `${instanceId}-${targetId}`
-          ) as HTMLDetailsElement | null;
-          const summaryEl = document.getElementById(
-            `${instanceId}-${targetId}-summary`
-          ) as HTMLElement | null;
+        if (!summaryEl) {
+          return;
+        }
 
-          if (!summaryEl) {
-            return;
-          }
+        initialNavStatusRef.current = "completed";
+        window.removeEventListener("scroll", markUserInteracted);
 
-          if (detailsEl && !detailsEl.open) {
-            detailsEl.open = true;
-          }
+        if (detailsEl && !detailsEl.open) {
+          detailsEl.open = true;
+        }
 
-          const prefersReducedMotion = window.matchMedia(
-            "(prefers-reduced-motion: reduce)"
-          ).matches;
-          const scrollBehavior: ScrollBehavior = prefersReducedMotion
-            ? "auto"
-            : "smooth";
+        const prefersReducedMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)"
+        ).matches;
+        const scrollBehavior: ScrollBehavior = prefersReducedMotion
+          ? "auto"
+          : "smooth";
 
-          summaryEl.focus({ preventScroll: true });
-          summaryEl.scrollIntoView({
-            behavior: scrollBehavior,
-            block: "start",
-          });
-
-          if (!prefersReducedMotion) {
-            correctionTimeoutId = window.setTimeout(() => {
-              if (userInteractedBeforeNavRef.current) {
-                return;
-              }
-              const rect = summaryEl.getBoundingClientRect();
-              if (rect.top < 0 || rect.top > window.innerHeight * 0.45) {
-                summaryEl.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-              }
-            }, 280);
-          }
+        summaryEl.focus({ preventScroll: true });
+        summaryEl.scrollIntoView({
+          behavior: scrollBehavior,
+          block: "start",
         });
+
+        if (!prefersReducedMotion) {
+          correctionTimeoutId = window.setTimeout(() => {
+            correctionTimeoutId = null;
+            if (userInteractedBeforeNavRef.current) {
+              return;
+            }
+            const rect = summaryEl.getBoundingClientRect();
+            if (rect.top < 0 || rect.top > window.innerHeight * 0.45) {
+              summaryEl.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }
+          }, 280);
+        }
       });
-    }
+    });
 
     return () => {
       window.removeEventListener("keydown", markUserInteracted);
       window.removeEventListener("pointerdown", markUserInteracted);
       window.removeEventListener("wheel", markUserInteracted);
       window.removeEventListener("touchmove", markUserInteracted);
+      window.removeEventListener("scroll", markUserInteracted);
       if (rafId1 !== null) {
         window.cancelAnimationFrame(rafId1);
       }
@@ -159,6 +192,9 @@ export function useFaqQuerySync(
       }
       if (correctionTimeoutId !== null) {
         window.clearTimeout(correctionTimeoutId);
+      }
+      if (initialNavStatusRef.current === "scheduled") {
+        initialNavStatusRef.current = "idle";
       }
     };
   }, [instanceId, selectedId, validExplicitQuestion]);
@@ -188,16 +224,43 @@ export function useFaqQuerySync(
   const handleThemeChange = useCallback(
     (nextTheme: FaqTheme) => {
       userInteractedBeforeNavRef.current = true;
-      replaceUrlIfChanged(nextTheme, selectedId);
+      initialNavStatusRef.current = "completed";
+
+      const currentSearch =
+        typeof window !== "undefined" ? window.location.search : "";
+      const currentParsed = parseFaqQuery(
+        new URLSearchParams(currentSearch),
+        items
+      );
+
+      replaceUrlIfChanged(nextTheme, currentParsed.selectedId);
     },
-    [replaceUrlIfChanged, selectedId]
+    [items, replaceUrlIfChanged]
   );
 
   const handleOpenChange = useCallback(
     (nextSelectedId: string | null) => {
-      userInteractedBeforeNavRef.current = true;
+      const currentSearch =
+        typeof window !== "undefined" ? window.location.search : "";
+      const currentParsed = parseFaqQuery(
+        new URLSearchParams(currentSearch),
+        items
+      );
 
-      if (nextSelectedId !== null && nextSelectedId !== selectedId) {
+      if (
+        nextSelectedId === currentParsed.selectedId &&
+        nextSelectedId === selectedId
+      ) {
+        return;
+      }
+
+      userInteractedBeforeNavRef.current = true;
+      initialNavStatusRef.current = "completed";
+
+      if (
+        nextSelectedId !== null &&
+        nextSelectedId !== currentParsed.selectedId
+      ) {
         tokenRef.current += 1;
         setHighlight({
           id: nextSelectedId,
@@ -208,9 +271,9 @@ export function useFaqQuerySync(
         setHighlight(undefined);
       }
 
-      replaceUrlIfChanged(theme, nextSelectedId);
+      replaceUrlIfChanged(currentParsed.theme, nextSelectedId);
     },
-    [replaceUrlIfChanged, selectedId, theme]
+    [items, replaceUrlIfChanged, selectedId]
   );
 
   const shareUrl = useMemo(() => {

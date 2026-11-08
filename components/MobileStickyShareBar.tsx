@@ -14,6 +14,7 @@ export function MobileStickyShareBar({
   const {
     barRef,
     isRetreated,
+    hasFocusWithin,
     footerOverlap,
     barHeight,
     handleFocusIn,
@@ -33,11 +34,13 @@ export function MobileStickyShareBar({
         ref={barRef}
         aria-label="モバイル用クイック共有バー"
         data-theme={theme}
+        data-focus-within={hasFocusWithin ? "true" : undefined}
         inert={isRetreated ? true : undefined}
         onFocus={handleFocusIn}
         onBlur={handleFocusOut}
         style={{
-          bottom: `${footerOverlap}px`,
+          bottom: `${Math.max(0, footerOverlap)}px`,
+          maxHeight: "100dvh",
           transform: isRetreated ? "translateY(110%)" : "translateY(0)",
           visibility: isRetreated ? "hidden" : "visible",
         }}
